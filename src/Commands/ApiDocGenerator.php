@@ -24,28 +24,28 @@ class ApiDocGenerator extends Command
      * @apiErr 422 | Unauthorized access
      * @apiResp 200 | User is logged in
      */
-    
+
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
     protected $signature = 'apidoc:generate';
-    
+
     /**
      * The console command description.
      *
      * @var string
      */
     protected $description = 'Generate api documentation from controllers';
-    
-    
+
+
     /**
      * generated code for swagger
      * @var array
      */
     protected $swagger;
-    
+
     /**
      * Create a new command instance.
      *
@@ -55,7 +55,7 @@ class ApiDocGenerator extends Command
     {
         parent::__construct();
     }
-    
+
     /**
      * Execute the console command.
      *
@@ -68,7 +68,7 @@ class ApiDocGenerator extends Command
         }
         $this->config = $this->setMainSwaggerInfo();
         foreach ($this->getRouteControllerData() as $controller => $methods) {
-            
+
             //write controller resource
             $currentControllerClassName = current($methods);
             foreach ($methods as $method) {
@@ -76,16 +76,16 @@ class ApiDocGenerator extends Command
                 $this->setTag($method);
                 $this->setPaths($method);
             }
-            
+
         }
-        
+
         // Fix root tags
         $this->fixRootTags();
-        
+
         //write doc text to file
         $this->writeToFile();
     }
-    
+
     /**
      * Get controllers data from routes
      * @return mixed
@@ -95,17 +95,17 @@ class ApiDocGenerator extends Command
         $controllers = [];
         foreach (\Route::getRoutes() as $route) {
             $controllerName = explode('@', $route->getActionName());
-            
+
             $controllerNameSpace = array_get($controllerName, 0);
             $actionName = array_get($controllerName, 1);
-            
+
             $controllerClassName = explode('\\', $controllerNameSpace);
             $controllerClassName = end($controllerClassName);
-            
+
             if ($controllerClassName === 'Closure') {
                 continue;
             }
-            
+
             $controllers[$controllerNameSpace][] = [
                 'host'                => $route->domain(),
                 'method'              => implode('|', $route->methods()),
@@ -116,10 +116,10 @@ class ApiDocGenerator extends Command
                 'actionName'          => $actionName,
             ];
         }
-        
+
         return $controllers;
     }
-    
+
     /**
      * Set main data for swagger. Version, title ,etc.
      */
@@ -137,7 +137,7 @@ class ApiDocGenerator extends Command
         $this->swagger['basePath'] = '/'.trim(config('apidoc.apiBasePath'), '/');
         $this->swagger['tags'] = [];
     }
-    
+
     /**
      * Set all tags
      * @param $methods
@@ -146,14 +146,14 @@ class ApiDocGenerator extends Command
     {
         $name = str_replace(config('apidoc.apiBasePath'), '', array_get($methods, 'uri', ''));
         $description = array_get($methods, 'controllerClassName', '');
-        
+
         $this->swagger['tags'][$name] = [
             'name'        => $name,
             'description' => $description,
         ];
         // add new tag
     }
-    
+
     /**
      * Discard unnecessary array keys for tags
      */
@@ -161,7 +161,7 @@ class ApiDocGenerator extends Command
     {
         $this->swagger['tags'] = array_values($this->swagger['tags']);
     }
-    
+
     /**
      * Set Scheme
      * @return array
@@ -170,7 +170,7 @@ class ApiDocGenerator extends Command
     {
         return $this->swagger['schemes'];
     }
-    
+
     /**
      * Set path
      * @param $method
@@ -179,13 +179,13 @@ class ApiDocGenerator extends Command
     protected function setPaths($method)
     {
         $docArray = $this->methodCommentToArray($method);
-        
+
         if ( ! count($docArray)) {
             return;
         }
-        
+
         $methodType = strtolower(str_replace('|HEAD', '', $method['method']));
-        
+
         $path = [
             'tags'        => [
                 str_replace(Container::getInstance()->getNamespace().'\Http\Controllers', '', array_get($method, 'controllerNameSpace', '')),
@@ -204,11 +204,11 @@ class ApiDocGenerator extends Command
             'parameters'  => $this->setParams($docArray, $method),
             'responses'   => $this->setResponses($docArray),
         ];
-        
-        
+
+
         return $this->swagger['paths'][str_replace('api/v1', '', array_get($method, 'uri', ''))][$methodType] = $path;
     }
-    
+
     /**
      * Set method params
      * @param $docArray
@@ -233,7 +233,7 @@ class ApiDocGenerator extends Command
                 $params[$param] = $field;
             }
         }
-        
+
         foreach (array_get($docArray, 'params', []) as $paramString) {
             $paramOptions = $this->setParam($paramString, $method, $params);
             if ($paramOptions['type'] === 'file') {
@@ -243,11 +243,11 @@ class ApiDocGenerator extends Command
             }
             $params[isset($paramOptions['name']) ? $paramOptions['name'] : ''] = $paramOptions;
         }
-        
+
         // We need to reset the array to numeric in order for json to create it as array.
         return array_values($params);
     }
-    
+
     /**
      * Set param
      * @param       $paramDocString
@@ -259,12 +259,12 @@ class ApiDocGenerator extends Command
     protected function setParam($paramDocString, $method, &$params)
     {
         $options = [];
-        
+
         $descMessage = explode('|', $paramDocString);
         $descMessage = array_get($descMessage, 1);
         $paramDocString = str_replace('|'.$descMessage, '', $paramDocString);
         $options['description'] = trim($descMessage);
-        
+
         // get type
         if (strpos($paramDocString, 'string') !== false) {
             $options['type'] = 'string';
@@ -302,28 +302,28 @@ class ApiDocGenerator extends Command
             $options['type'] = 'file';
             $paramDocString = str_replace('file', '', $paramDocString);
         } // get type
-        
+
         // get required
         if (strpos($paramDocString, 'required') !== false) {
             $options['required'] = true;
             $paramDocString = str_replace('required', '', $paramDocString);
         }
-        
+
         // parameter send from
         $options['in'] = 'formData';
-        
+
         $paramDocString = str_replace('in_path', '', $paramDocString, $count);
         if ($count) {
             $options['in'] = 'path';
         }
-        
+
         $count = 0;
-        
+
         $paramDocString = str_replace('in_query', '', $paramDocString, $count);
         if ($count) {
             $options['in'] = 'query';
         }
-        
+
         // get parameter
         $paramDocString = trim($paramDocString);
         if (strpos($paramDocString, '$') !== false) {
@@ -334,14 +334,14 @@ class ApiDocGenerator extends Command
                 unset($params[$paramDocString]);
             }
         }
-        
+
         if ( ! isset($options['type']) || ! $options['type']) {
             throw new \Exception('Missing type for '.$method['controllerNameSpace'].'@'.$method['actionName'].' with param '.$options['name']);
         }
-        
+
         return $options;
     }
-    
+
     /**
      * Set response
      * @param $paramDocString
@@ -354,18 +354,18 @@ class ApiDocGenerator extends Command
             $responseMessage = explode('|', $response);
             $responseMessage = array_get($responseMessage, 1);
             $responseCode = str_replace('|'.$responseMessage, '', $response);
-            
+
             if (isset($responses[trim($responseCode)])) {
                 throw new \Exception("Only one description per response code is permitted in a param doc string:\n\n$paramDocString");
             }
-            
+
             $responses[trim($responseCode)]['description'] = trim($responseMessage);
         }
-        
+
         return $responses;
-        
+
     }
-    
+
     /**
      * Get documentation to array
      * @param $method
@@ -375,11 +375,11 @@ class ApiDocGenerator extends Command
     {
         $actionMethodName = array_get($method, 'actionName', null);
         $controllerNameSpace = array_get($method, 'controllerNameSpace', null);
-        
+
         if ((empty($actionMethodName)) || ( ! $controllerNameSpace)) {
             return [];
         }
-        
+
         $documentationArray = [];
         $reflector = new ReflectionClass($controllerNameSpace);
         if ( ! $reflector->hasMethod($actionMethodName)) {
@@ -387,20 +387,20 @@ class ApiDocGenerator extends Command
         }
         // to get the Method DocBlock
         $doc = $reflector->getMethod($actionMethodName)->getDocComment();
-        
+
         foreach (explode("\n", $doc) as $row) {
             $this->commentRowReader($row, '@apiDesc', 'desc', $documentationArray);
             $this->commentRowReader($row, '@apiParam', 'params', $documentationArray);
             $this->commentRowReader($row, '@apiErr', 'responses', $documentationArray);
             $this->commentRowReader($row, '@apiResp', 'responses', $documentationArray);
         }
-        
-        
+
+
         return $documentationArray;
-        
+
     }
-    
-    
+
+
     /**
      * Read row data and set data into arrays
      * @param string $row data from the comment
@@ -422,7 +422,7 @@ class ApiDocGenerator extends Command
             }
         }
     }
-    
+
     /**
      * Write swagger data to json file
      */
@@ -433,6 +433,6 @@ class ApiDocGenerator extends Command
         \File::makeDirectory($fileDir);
         \File::put($fileDir.DIRECTORY_SEPARATOR.'resource.json', json_encode($this->swagger));
     }
-    
-    
+
+
 }
