@@ -79,6 +79,9 @@ class ApiDocGenerator extends Command
             
         }
         
+        // Fix root tags
+        $this->fixRootTags();
+        
         //write doc text to file
         $this->writeToFile();
     }
@@ -141,13 +144,22 @@ class ApiDocGenerator extends Command
      */
     protected function setTag($methods)
     {
-        $tag = [
-            'name'        => str_replace(config('apidoc.apiBasePath'), '', array_get($methods, 'uri', '')),
-            'description' => array_get($methods, 'controllerClassName', ''),
-        ];
+        $name = str_replace(config('apidoc.apiBasePath'), '', array_get($methods, 'uri', ''));
+        $description = array_get($methods, 'controllerClassName', '');
         
-        $this->swagger['tags'][] = $tag;
+        $this->swagger['tags'][$name] = [
+            'name'        => $name,
+            'description' => $description,
+        ];
         // add new tag
+    }
+    
+    /**
+     * Discard unnecessary array keys for tags
+     */
+    protected function fixRootTags()
+    {
+        $this->swagger['tags'] = array_values($this->swagger['tags']);
     }
     
     /**
