@@ -24,13 +24,13 @@ class ApiDocServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__.'/config/apidoc.php', 'apidoc'
         );
-    
+
         $this->loadViewsFrom(__DIR__.'/resources/views', 'apidoc');
-    
-    
+
+
         include __DIR__.'/routes.php';
     }
-    
+
     /**
      * Register the service provider.
      *
@@ -38,9 +38,9 @@ class ApiDocServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        
+
         $this->commands($this->registerCommands());
-        
+
     }
 
     protected function registerCommands()
