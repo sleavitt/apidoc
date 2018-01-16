@@ -3,6 +3,7 @@
 namespace Despark\Apidoc\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Container\Container;
 use ReflectionClass;
 
 /**
@@ -175,7 +176,7 @@ class ApiDocGenerator extends Command
         
         $path = [
             'tags'        => [
-                str_replace('CE\Http\Controllers', '', array_get($method, 'controllerNameSpace', '')),
+                str_replace(Container::getInstance()->getNamespace().'\Http\Controllers', '', array_get($method, 'controllerNameSpace', '')),
             ],
             'summary'     => array_get($docArray, 'desc'),
             'description' => array_get($method, 'controllerClassName', ''),
