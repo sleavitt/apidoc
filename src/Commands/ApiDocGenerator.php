@@ -343,7 +343,11 @@ class ApiDocGenerator extends Command
             $responseMessage = array_get($responseMessage, 1);
             $responseCode = str_replace('|'.$responseMessage, '', $response);
             
-            $responses[trim($responseCode)]['description'][] = trim($responseMessage);
+            if (isset($responses[trim($responseCode)])) {
+                throw new \Exception("Only one description per response code is permitted in a param doc string:\n\n$paramDocString");
+            }
+            
+            $responses[trim($responseCode)]['description'] = trim($responseMessage);
         }
         
         return $responses;
